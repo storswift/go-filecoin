@@ -6,6 +6,7 @@ import (
 
 	"gx/ipfs/QmR8BauakNcBa3RbE4nbQu76PDiJgoQgz8AJdhJuiU4TAw/go-cid"
 
+	"github.com/filecoin-project/go-filecoin/state"
 	"github.com/filecoin-project/go-filecoin/types"
 	"gx/ipfs/QmPVkJMTeRC6iBByPWdrRkD3BE5UXsj5HPzb4kPqL186mS/testify/assert"
 	"gx/ipfs/QmPVkJMTeRC6iBByPWdrRkD3BE5UXsj5HPzb4kPqL186mS/testify/require"
@@ -44,6 +45,10 @@ func (mcr FakeChainer) GetBlock(ctx context.Context, cid cid.Cid) (*types.Block,
 
 func (mcr *FakeChainer) Head() types.TipSet {
 	return mcr.head
+}
+
+func (mcr *FakeChainer) LatestState(ctx context.Context) (state.Tree, error) {
+	return nil, errors.New("Not defined yet")
 }
 
 func TestChainLs(t *testing.T) {

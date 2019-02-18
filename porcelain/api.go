@@ -125,3 +125,8 @@ func (a *API) MinerPreviewSetPrice(
 func (a *API) GetAndMaybeSetDefaultSenderAddress() (address.Address, error) {
 	return GetAndMaybeSetDefaultSenderAddress(a)
 }
+
+// WalletBalance returns the current balance of the given wallet address.
+func (a *API) WalletBalance(ctx context.Context, address address.Address) (*types.AttoFIL, error) {
+	return WalletBalance(ctx, a, address)
+}

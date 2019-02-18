@@ -5,6 +5,7 @@ import (
 
 	"gx/ipfs/QmR8BauakNcBa3RbE4nbQu76PDiJgoQgz8AJdhJuiU4TAw/go-cid"
 
+	"github.com/filecoin-project/go-filecoin/state"
 	"github.com/filecoin-project/go-filecoin/types"
 )
 
@@ -13,6 +14,7 @@ type ChainReader interface {
 	BlockHistory(ctx context.Context, ts types.TipSet) <-chan interface{}
 	GetBlock(ctx context.Context, id cid.Cid) (*types.Block, error)
 	Head() types.TipSet
+	LatestState(ctx context.Context) (state.Tree, error)
 }
 
 // Reader is plumbing implementation for inspecting the blockchain
@@ -40,4 +42,9 @@ func (c *Reader) Ls(ctx context.Context) <-chan interface{} {
 // BlockGet returns a block by its CID
 func (c *Reader) BlockGet(ctx context.Context, id cid.Cid) (*types.Block, error) {
 	return c.chainReader.GetBlock(ctx, id)
+}
+
+// LatestState returns the latest state of the chain
+func (c *Reader) LatestState(ctx context.Context) (state.Tree, error) {
+	return c.chainReader.LatestState(ctx)
 }
