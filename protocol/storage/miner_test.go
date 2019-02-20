@@ -213,6 +213,20 @@ func TestReceiveStorageProposal(t *testing.T) {
 		assert.Equal(Rejected, res.State)
 		assert.Contains(res.Message, "voucher amount")
 	})
+
+	t.Run("Rejects proposals with invalid signature", func(t *testing.T) {
+		assert := assert.New(t)
+		require := require.New(t)
+
+		_, miner, proposal := newMinerTestSetup()
+		proposal.Signature = []byte{'0', '0', '0'}
+
+		res, err := miner.receiveStorageProposal(context.Background(), proposal)
+		require.NoError(err)
+
+		assert.Equal(Rejected, res.State)
+		assert.Equal("invalid deal signature", res.Message)
+	})
 }
 
 func TestDealsAwaitingSeal(t *testing.T) {
