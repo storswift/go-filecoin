@@ -12,6 +12,7 @@ import (
 func init() {
 	cbor.RegisterCborType(PaymentInfo{})
 	cbor.RegisterCborType(DealProposal{})
+	cbor.RegisterCborType(SignedDealProposal{})
 	cbor.RegisterCborType(DealResponse{})
 	cbor.RegisterCborType(ProofInfo{})
 	cbor.RegisterCborType(queryRequest{})
@@ -60,8 +61,24 @@ type DealProposal struct {
 	// will use to pay the miner. It should be verifiable by the
 	// miner using on-chain information.
 	Payment PaymentInfo
+}
 
-	// Signature types.Signature
+// Unmarshal a DealProposal from the given bytes.
+func (dp *DealProposal) Unmarshal(b []byte) error {
+	return cbor.DecodeInto(b, dp)
+}
+
+// Marshal the DealProposal into bytes.
+func (dp *DealProposal) Marshal() ([]byte, error) {
+	return cbor.DumpObject(dp)
+}
+
+// SignedDealProposal is the information sent over the wire, when a clinet proposes a deal to a miner.
+// The SignedDealProposal contains the DealProposal and a Signature for the proposal.
+type SignedDealProposal struct {
+	DealProposal
+	// Signature is the signature of the client proposing the deal.
+	Signature types.Signature
 }
 
 // DealResponse is the information sent over the wire, when a miner responds to a client.

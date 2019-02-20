@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -30,14 +31,14 @@ func TestProposeDeal(t *testing.T) {
 	addressCreator := address.NewForTestGetter()
 	cidCreator := types.NewCidForTestGetter()
 
-	var proposal *DealProposal
+	var proposal *SignedDealProposal
 
 	testNode := newTestClientNode(func(request interface{}) (interface{}, error) {
-		p, ok := request.(*DealProposal)
+		p, ok := request.(*SignedDealProposal)
 		require.True(ok)
 		proposal = p
 
-		pcid, err := convert.ToCid(p)
+		pcid, err := convert.ToCid(p.DealProposal)
 		require.NoError(err)
 		return &DealResponse{
 			State:       Accepted,
@@ -58,6 +59,7 @@ func TestProposeDeal(t *testing.T) {
 	askID := uint64(67)
 	duration := uint64(10000)
 	dealResponse, err := client.ProposeDeal(ctx, minerAddr, dataCid, askID, duration, false)
+	fmt.Println(dealResponse)
 	require.NoError(err)
 
 	t.Run("and creates proposal from parameters", func(t *testing.T) {
@@ -110,6 +112,7 @@ func TestProposeDeal(t *testing.T) {
 			Prefix: "/" + clientDatastorePrefix,
 		})
 		require.NoError(err)
+		fmt.Println(res)
 
 		// expect one entry to be the response
 		var response *DealResponse
@@ -206,6 +209,10 @@ func newTestClientNode(responder func(request interface{}) (interface{}, error))
 	return &testClientNode{
 		responder: responder,
 	}
+}
+
+func (tcn *testClientNode) SignBytes(data []byte, addr address.Address) (types.Signature, error) {
+	return nil, nil
 }
 
 func (tcn *testClientNode) GetBlockTime() time.Duration {

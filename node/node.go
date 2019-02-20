@@ -491,7 +491,7 @@ func (node *Node) Start(ctx context.Context) error {
 	}
 	node.HelloSvc = hello.New(node.Host(), node.ChainReader.GenesisCid(), syncCallBack, node.ChainReader.Head)
 
-	cni := storage.NewClientNodeImpl(dag.NewDAGService(node.BlockService()), node.Host(), node.GetBlockTime())
+	cni := storage.NewClientNodeImpl(dag.NewDAGService(node.BlockService()), node.Host(), node.GetBlockTime(), node.Wallet)
 	var err error
 	node.StorageMinerClient, err = storage.NewClient(cni, node.PorcelainAPI, node.Repo.DealsDatastore())
 	if err != nil {

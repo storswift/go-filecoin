@@ -42,7 +42,7 @@ func TestReceiveStorageProposal(t *testing.T) {
 			},
 		}
 
-		proposal := testDealProposal(porcelainAPI, VoucherInterval, 1773, porcelainAPI.targetAddress)
+		proposal := testSignedDealProposal(porcelainAPI, VoucherInterval, 1773, porcelainAPI.targetAddress)
 
 		_, err := miner.receiveStorageProposal(context.Background(), proposal)
 		require.NoError(err)
@@ -114,10 +114,26 @@ func TestReceiveStorageProposal(t *testing.T) {
 		assert := assert.New(t)
 		require := require.New(t)
 
-		_, miner, proposal := newMinerTestSetup()
+		porcelainAPI, miner, proposal := newMinerTestSetup()
 		proposal.Payment.Vouchers = []*paymentbroker.PaymentVoucher{}
 
-		res, err := miner.receiveStorageProposal(context.Background(), proposal)
+		// since we are modifying the deal after we create it, we must resign it
+		bdp, err := proposal.DealProposal.Marshal()
+		if err != nil {
+			panic(err)
+		}
+
+		sig, err := porcelainAPI.signer.SignBytes(bdp, porcelainAPI.payerAddress)
+		if err != nil {
+			panic(err)
+		}
+
+		signedProposal := &SignedDealProposal{
+			DealProposal: proposal.DealProposal,
+			Signature:    sig,
+		}
+
+		res, err := miner.receiveStorageProposal(context.Background(), signedProposal)
 		require.NoError(err)
 
 		assert.Equal(Rejected, res.State)
@@ -128,10 +144,26 @@ func TestReceiveStorageProposal(t *testing.T) {
 		assert := assert.New(t)
 		require := require.New(t)
 
-		_, miner, proposal := newMinerTestSetup()
+		porcelainAPI, miner, proposal := newMinerTestSetup()
 		proposal.Payment.Vouchers[0].Signature = types.Signature([]byte{})
 
-		res, err := miner.receiveStorageProposal(context.Background(), proposal)
+		// since we are modifying the deal after we create it, we must resign it
+		bdp, err := proposal.DealProposal.Marshal()
+		if err != nil {
+			panic(err)
+		}
+
+		sig, err := porcelainAPI.signer.SignBytes(bdp, porcelainAPI.payerAddress)
+		if err != nil {
+			panic(err)
+		}
+
+		signedProposal := &SignedDealProposal{
+			DealProposal: proposal.DealProposal,
+			Signature:    sig,
+		}
+
+		res, err := miner.receiveStorageProposal(context.Background(), signedProposal)
 		require.NoError(err)
 
 		assert.Equal(Rejected, res.State)
@@ -144,7 +176,7 @@ func TestReceiveStorageProposal(t *testing.T) {
 
 		porcelainAPI, miner, _ := newMinerTestSetup()
 		porcelainAPI.paymentStart = porcelainAPI.paymentStart.Add(types.NewBlockHeight(15))
-		proposal := testDealProposal(porcelainAPI, VoucherInterval, 1773, porcelainAPI.targetAddress)
+		proposal := testSignedDealProposal(porcelainAPI, VoucherInterval, 1773, porcelainAPI.targetAddress)
 
 		res, err := miner.receiveStorageProposal(context.Background(), proposal)
 		require.NoError(err)
@@ -159,7 +191,7 @@ func TestReceiveStorageProposal(t *testing.T) {
 
 		porcelainAPI, miner, _ := newMinerTestSetup()
 		porcelainAPI.paymentStart = porcelainAPI.paymentStart.Sub(types.NewBlockHeight(15))
-		proposal := testDealProposal(porcelainAPI, VoucherInterval+15, 1773, porcelainAPI.targetAddress)
+		proposal := testSignedDealProposal(porcelainAPI, VoucherInterval+15, 1773, porcelainAPI.targetAddress)
 
 		res, err := miner.receiveStorageProposal(context.Background(), proposal)
 		require.NoError(err)
@@ -173,7 +205,7 @@ func TestReceiveStorageProposal(t *testing.T) {
 		require := require.New(t)
 
 		porcelainAPI, miner, _ := newMinerTestSetup()
-		proposal := testDealProposal(porcelainAPI, VoucherInterval, 1, porcelainAPI.targetAddress)
+		proposal := testSignedDealProposal(porcelainAPI, VoucherInterval, 1, porcelainAPI.targetAddress)
 
 		res, err := miner.receiveStorageProposal(context.Background(), proposal)
 		require.NoError(err)
@@ -404,12 +436,12 @@ func newTestMiner(api *minerTestPorcelain) *Miner {
 	}
 }
 
-func newMinerTestSetup() (*minerTestPorcelain, *Miner, *DealProposal) {
+func newMinerTestSetup() (*minerTestPorcelain, *Miner, *SignedDealProposal) {
 	porcelainAPI := newMinerTestPorcelain()
-	return porcelainAPI, newTestMiner(porcelainAPI), testDealProposal(porcelainAPI, VoucherInterval, 1773, porcelainAPI.targetAddress)
+	return porcelainAPI, newTestMiner(porcelainAPI), testSignedDealProposal(porcelainAPI, VoucherInterval, 1773, porcelainAPI.targetAddress)
 }
 
-func testDealProposal(porcelainAPI *minerTestPorcelain, voucherInterval int, amountInc uint64, addr address.Address) *DealProposal {
+func testSignedDealProposal(porcelainAPI *minerTestPorcelain, voucherInterval int, amountInc uint64, addr address.Address) *SignedDealProposal {
 	vouchers := make([]*paymentbroker.PaymentVoucher, 10)
 
 	for i := 0; i < 10; i++ {
@@ -429,10 +461,12 @@ func testDealProposal(porcelainAPI *minerTestPorcelain, voucherInterval int, amo
 		}
 	}
 
-	return &DealProposal{
-		TotalPrice: types.NewAttoFILFromFIL(2500),
-		Size:       types.NewBytesAmount(1000),
-		Duration:   10000,
+	proposal := &DealProposal{
+		MinerAddress: porcelainAPI.targetAddress,
+		PieceRef:     types.NewCidForTestGetter()(),
+		TotalPrice:   types.NewAttoFILFromFIL(2500),
+		Size:         types.NewBytesAmount(1000),
+		Duration:     10000,
 		Payment: PaymentInfo{
 			Payer:         porcelainAPI.payerAddress,
 			PayChActor:    address.PaymentBrokerAddress,
@@ -441,4 +475,20 @@ func testDealProposal(porcelainAPI *minerTestPorcelain, voucherInterval int, amo
 			Vouchers:      vouchers,
 		},
 	}
+
+	bdp, err := proposal.Marshal()
+	if err != nil {
+		panic(err)
+	}
+
+	sig, err := porcelainAPI.signer.SignBytes(bdp, porcelainAPI.payerAddress)
+	if err != nil {
+		panic(err)
+	}
+
+	signedProposal := &SignedDealProposal{
+		DealProposal: *proposal,
+		Signature:    sig,
+	}
+	return signedProposal
 }

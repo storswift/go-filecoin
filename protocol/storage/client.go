@@ -59,6 +59,7 @@ type clientNode interface {
 	GetFileSize(context.Context, cid.Cid) (uint64, error)
 	MakeProtocolRequest(ctx context.Context, protocol protocol.ID, peer peer.ID, request interface{}, response interface{}) error
 	GetBlockTime() time.Duration
+	types.Signer
 }
 
 type clientPorcelainAPI interface {
@@ -142,12 +143,12 @@ func (smc *Client) ProposeDeal(ctx context.Context, miner address.Address, data 
 		TotalPrice:   totalPrice,
 		Duration:     duration,
 		MinerAddress: miner,
-		// TODO: Sign this proposal
 	}
 
 	if smc.isMaybeDupDeal(proposal) && !allowDuplicates {
 		return nil, Errors[ErrDupicateDeal]
 	}
+
 	// create payment information
 	cpResp, err := smc.api.CreatePayments(ctx, porcelain.CreatePaymentsParams{
 		From:            fromAddress,
@@ -169,6 +170,22 @@ func (smc *Client) ProposeDeal(ctx context.Context, miner address.Address, data 
 	proposal.Payment.ChannelMsgCid = &cpResp.ChannelMsgCid
 	proposal.Payment.Vouchers = cpResp.Vouchers
 
+	// client signs the DealProposal with the address they are sending from
+	bdp, err := proposal.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := smc.node.SignBytes(bdp, fromAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	signedProposal := &SignedDealProposal{
+		DealProposal: *proposal,
+		Signature:    signature,
+	}
+
 	// send proposal
 	pid, err := smc.api.MinerGetPeerID(ctx, miner)
 	if err != nil {
@@ -176,7 +193,7 @@ func (smc *Client) ProposeDeal(ctx context.Context, miner address.Address, data 
 	}
 
 	var response DealResponse
-	err = smc.node.MakeProtocolRequest(ctx, makeDealProtocol, pid, proposal, &response)
+	err = smc.node.MakeProtocolRequest(ctx, makeDealProtocol, pid, signedProposal, &response)
 	if err != nil {
 		return nil, errors.Wrap(err, "error sending proposal")
 	}
@@ -187,7 +204,7 @@ func (smc *Client) ProposeDeal(ctx context.Context, miner address.Address, data 
 
 	// Note: currently the miner requests the data out of band
 
-	if err := smc.recordResponse(&response, miner, proposal); err != nil {
+	if err := smc.recordResponse(&response, miner, &signedProposal.DealProposal); err != nil {
 		return nil, errors.Wrap(err, "failed to track response")
 	}
 
@@ -340,15 +357,23 @@ type ClientNodeImpl struct {
 	dserv     ipld.DAGService
 	host      host.Host
 	blockTime time.Duration
+	signer    types.Signer
 }
 
 // NewClientNodeImpl constructs a ClientNodeImpl
-func NewClientNodeImpl(ds ipld.DAGService, host host.Host, bt time.Duration) *ClientNodeImpl {
+func NewClientNodeImpl(ds ipld.DAGService, host host.Host, bt time.Duration, s types.Signer) *ClientNodeImpl {
 	return &ClientNodeImpl{
 		dserv:     ds,
 		host:      host,
 		blockTime: bt,
+		signer:    s,
 	}
+}
+
+// SignBytes implements the types.signer interface. This allows ClientNode to
+// sign data with the address `addr`.
+func (cni *ClientNodeImpl) SignBytes(data []byte, addr address.Address) (types.Signature, error) {
+	return cni.signer.SignBytes(data, addr)
 }
 
 // GetBlockTime returns the blocktime this node is configured with.
