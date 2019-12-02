@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"time"
 
-	"gx/ipfs/QmR8BauakNcBa3RbE4nbQu76PDiJgoQgz8AJdhJuiU4TAw/go-cid"
-	logging "gx/ipfs/QmbkT7eMTyXfpeyB3ZMxxcxg7XH8t6uXp49jqzz4HB7BGF/go-log"
+	"github.com/ipfs/go-cid"
+	logging "github.com/ipfs/go-log"
 
-	"github.com/filecoin-project/go-filecoin/address"
+	"github.com/filecoin-project/go-filecoin/internal/pkg/vm/address"
 	"github.com/filecoin-project/go-filecoin/tools/faucet/limiter"
 )
 
@@ -81,7 +81,7 @@ func main() {
 			return
 		}
 
-		reqStr := fmt.Sprintf("http://%s/api/message/send?arg=%s&value=%d&from=%s&price=0&limit=0", *filapi, addr.String(), *faucetval, *filwal)
+		reqStr := fmt.Sprintf("http://%s/api/message/send?arg=%s&value=%d&from=%s&gas-price=1&gas-limit=0", *filapi, addr.String(), *faucetval, *filwal)
 		log.Infof("Request URL: %s", reqStr)
 
 		resp, err := http.Post(reqStr, "application/json", nil)
@@ -131,7 +131,7 @@ const form = `
 	<body>
 		<h1> What is your wallet address </h1>
 		<p> You can find this by running: </p>
-		<tt> go-filecoin wallet addrs ls </tt>
+		<tt> go-filecoin address ls </tt>
 		<p> Address: </p>
 		<form action="/tap" method="post">
 			<input type="text" name="target" size="30" />

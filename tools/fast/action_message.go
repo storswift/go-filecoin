@@ -3,15 +3,16 @@ package fast
 import (
 	"context"
 
-	cid "gx/ipfs/QmR8BauakNcBa3RbE4nbQu76PDiJgoQgz8AJdhJuiU4TAw/go-cid"
+	cid "github.com/ipfs/go-cid"
 
-	"github.com/filecoin-project/go-filecoin/address"
-	"github.com/filecoin-project/go-filecoin/commands"
+	commands "github.com/filecoin-project/go-filecoin/cmd/go-filecoin"
+	"github.com/filecoin-project/go-filecoin/internal/pkg/types"
+	"github.com/filecoin-project/go-filecoin/internal/pkg/vm/address"
 )
 
 // MessageSend runs the `message send` command against the filecoin process.
-func (f *Filecoin) MessageSend(ctx context.Context, target address.Address, method string, options ...ActionOption) (cid.Cid, error) {
-	var out cid.Cid
+func (f *Filecoin) MessageSend(ctx context.Context, target address.Address, method types.MethodID, options ...ActionOption) (cid.Cid, error) {
+	var out commands.MessageSendResult
 
 	args := []string{"go-filecoin", "message", "send"}
 
@@ -21,15 +22,15 @@ func (f *Filecoin) MessageSend(ctx context.Context, target address.Address, meth
 
 	args = append(args, target.String())
 
-	if method != "" {
-		args = append(args, method)
+	if method != types.SendMethodID {
+		args = append(args, method.String())
 	}
 
 	if err := f.RunCmdJSONWithStdin(ctx, nil, &out, args...); err != nil {
 		return cid.Undef, err
 	}
 
-	return out, nil
+	return out.Cid, nil
 }
 
 // MessageWait runs the `message wait` command against the filecoin process.

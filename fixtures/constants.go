@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"sort"
 
-	cid "gx/ipfs/QmR8BauakNcBa3RbE4nbQu76PDiJgoQgz8AJdhJuiU4TAw/go-cid"
+	cid "github.com/ipfs/go-cid"
 
-	th "github.com/filecoin-project/go-filecoin/testhelpers"
-	"github.com/filecoin-project/go-filecoin/types"
+	"github.com/filecoin-project/go-filecoin/build/project"
+	"github.com/filecoin-project/go-filecoin/internal/pkg/types"
 )
 
 // The file used to build these addresses can be found in:
@@ -21,7 +21,7 @@ import (
 // rebuild using
 // TODO: move to build script
 // https://github.com/filecoin-project/go-filecoin/issues/921
-// cat ./fixtures/setup.json | ./gengen/gengen --json --keypath fixtures > fixtures/genesis.car 2> fixtures/gen.json
+// cat ./fixtures/setup.json | ./tools/gengen/gengen --json --keypath fixtures > fixtures/genesis.car 2> fixtures/gen.json
 
 // TestAddresses is a list of pregenerated addresses.
 var TestAddresses []string
@@ -35,20 +35,17 @@ var TestMiners []string
 type detailsStruct struct {
 	Keys   []*types.KeyInfo
 	Miners []struct {
-		Owner   int
-		Address string
-		Power   uint64
+		Owner               int
+		Address             string
+		NumCommittedSectors uint64
 	}
 	GenesisCid cid.Cid `refmt:",omitempty"`
 }
 
 func init() {
-	gopath, err := th.GetGoPath()
-	if err != nil {
-		panic(err)
-	}
+	root := project.Root()
 
-	detailspath := filepath.Join(gopath, "/src/github.com/filecoin-project/go-filecoin/fixtures/gen.json")
+	detailspath := filepath.Join(root, "fixtures/test/gen.json")
 	detailsFile, err := os.Open(detailspath)
 	if err != nil {
 		// fmt.Printf("Fixture data not found. Skipping fixture initialization: %s\n", err)
@@ -92,27 +89,24 @@ func init() {
 
 // KeyFilePaths returns the paths to the wallets of the testaddresses
 func KeyFilePaths() []string {
-	gopath, err := th.GetGoPath()
-	if err != nil {
-		panic(err)
-	}
-	folder := "/src/github.com/filecoin-project/go-filecoin/fixtures/"
+	root := project.Root()
+	folder := filepath.Join(root, "fixtures/test")
 
 	res := make([]string, len(testKeys))
 	for i, k := range testKeys {
-		res[i] = filepath.Join(gopath, folder, k)
+		res[i] = filepath.Join(folder, k)
 	}
 
 	return res
 }
 
-// test devnet addrs
+// staging devnet addrs
 const (
-	testFilecoinBootstrap0 string = "/dns4/test.kittyhawk.wtf/tcp/9000/ipfs/Qmd6xrWYHsxivfakYRy6MszTpuAiEoFbgE1LWw4EvwBpp4"
-	testFilecoinBootstrap1 string = "/dns4/test.kittyhawk.wtf/tcp/9001/ipfs/QmXq6XEYeEmUzBFuuKbVEGgxEpVD4xbSkG2Rhek6zkFMp4"
-	testFilecoinBootstrap2 string = "/dns4/test.kittyhawk.wtf/tcp/9002/ipfs/QmXhxqTKzBKHA5FcMuiKZv8YaMPwpbKGXHRVZcFB2DX9XY"
-	testFilecoinBootstrap3 string = "/dns4/test.kittyhawk.wtf/tcp/9003/ipfs/QmZGDLdQLUTi7uYTNavKwCd7SBc5KMfxzWxAyvqRQvwuiV"
-	testFilecoinBootstrap4 string = "/dns4/test.kittyhawk.wtf/tcp/9004/ipfs/QmZRnwmCjyNHgeNDiyT8mXRtGhP6uSzgHtrozc42crmVbg"
+	stagingFilecoinBootstrap0 string = "/dns4/staging.kittyhawk.wtf/tcp/9000/ipfs/Qmd6xrWYHsxivfakYRy6MszTpuAiEoFbgE1LWw4EvwBpp4"
+	stagingFilecoinBootstrap1 string = "/dns4/staging.kittyhawk.wtf/tcp/9001/ipfs/QmXq6XEYeEmUzBFuuKbVEGgxEpVD4xbSkG2Rhek6zkFMp4"
+	stagingFilecoinBootstrap2 string = "/dns4/staging.kittyhawk.wtf/tcp/9002/ipfs/QmXhxqTKzBKHA5FcMuiKZv8YaMPwpbKGXHRVZcFB2DX9XY"
+	stagingFilecoinBootstrap3 string = "/dns4/staging.kittyhawk.wtf/tcp/9003/ipfs/QmZGDLdQLUTi7uYTNavKwCd7SBc5KMfxzWxAyvqRQvwuiV"
+	stagingFilecoinBootstrap4 string = "/dns4/staging.kittyhawk.wtf/tcp/9004/ipfs/QmZRnwmCjyNHgeNDiyT8mXRtGhP6uSzgHtrozc42crmVbg"
 )
 
 // nightly devnet addrs
@@ -133,14 +127,14 @@ const (
 	userFilecoinBootstrap4 string = "/dns4/user.kittyhawk.wtf/tcp/9004/ipfs/QmZRnwmCjyNHgeNDiyT8mXRtGhP6uSzgHtrozc42crmVbg"
 )
 
-// DevnetTestBootstrapAddrs are the dns multiaddrs for the nodes of the filecoin
-// test devnet.
-var DevnetTestBootstrapAddrs = []string{
-	testFilecoinBootstrap0,
-	testFilecoinBootstrap1,
-	testFilecoinBootstrap2,
-	testFilecoinBootstrap3,
-	testFilecoinBootstrap4,
+// DevnetStagingBootstrapAddrs are the dns multiaddrs for the nodes of the filecoin
+// staging devnet.
+var DevnetStagingBootstrapAddrs = []string{
+	stagingFilecoinBootstrap0,
+	stagingFilecoinBootstrap1,
+	stagingFilecoinBootstrap2,
+	stagingFilecoinBootstrap3,
+	stagingFilecoinBootstrap4,
 }
 
 // DevnetNightlyBootstrapAddrs are the dns multiaddrs for the nodes of the filecoin

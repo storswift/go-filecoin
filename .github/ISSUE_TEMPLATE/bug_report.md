@@ -1,31 +1,22 @@
 ---
 name: Bug report
 about: Create a report to help us improve
-title: "[bug]"
 labels: C-bug, candidate
 assignees: ''
 
 ---
+<!--
+Please see the README for how to get help before filing a new bug report. 
+For questions, please ask on the forum: https://discuss.filecoin.io/
+-->
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+**Describe the bug**:
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Run this command '...'
-3. See error
+**Expected behavior**:
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+**Diagnostic information:**
+<!-- Please run the following commands and paste the output here: -->
 
-**Screenshots**
-If applicable, add logging output or screenshots to help explain your problem.
-
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [if applicable, e.g. chrome, safari]
- - Version [e.g. 22]
-
-**Additional context**
-Add any other context about the problem here.
+- Filecoin Version: <!-- go-filecoin version -->
+- Filecoin Inspect Output: <!-- go-filecoin inspect all -->
+- Initialization Command: <!-- If you have having issues connecting to the network, what command did you use to initialize? -->

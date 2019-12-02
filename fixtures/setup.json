@@ -9,6 +9,7 @@
   ],
   "miners": [{
     "owner": 0,
-    "power": 1
-  }]
+    "numCommittedSectors": 1
+  }],
+  "network": "go-filecoin-test"
 }

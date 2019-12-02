@@ -2,22 +2,20 @@ package fast
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 
-	cid "gx/ipfs/QmR8BauakNcBa3RbE4nbQu76PDiJgoQgz8AJdhJuiU4TAw/go-cid"
-	"gx/ipfs/QmTu65MVbemtUxJEWgsTtzv9Zv9P8rvmqNA4eG9TrTRGYc/go-libp2p-peer"
+	"github.com/ipfs/go-cid"
+	"github.com/libp2p/go-libp2p-core/peer"
 
-	"github.com/filecoin-project/go-filecoin/address"
-	"github.com/filecoin-project/go-filecoin/commands"
-	"github.com/filecoin-project/go-filecoin/porcelain"
+	"github.com/filecoin-project/go-filecoin/cmd/go-filecoin"
+	"github.com/filecoin-project/go-filecoin/internal/app/go-filecoin/porcelain"
+	"github.com/filecoin-project/go-filecoin/internal/pkg/vm/address"
 )
 
 // MinerCreate runs the `miner create` command against the filecoin process
-func (f *Filecoin) MinerCreate(ctx context.Context, pledge uint64, collateral *big.Int, options ...ActionOption) (address.Address, error) {
+func (f *Filecoin) MinerCreate(ctx context.Context, collateral *big.Int, options ...ActionOption) (address.Address, error) {
 	var out commands.MinerCreateResult
 
-	sPledge := fmt.Sprintf("%d", pledge)
 	sCollateral := collateral.String()
 
 	args := []string{"go-filecoin", "miner", "create"}
@@ -26,10 +24,10 @@ func (f *Filecoin) MinerCreate(ctx context.Context, pledge uint64, collateral *b
 		args = append(args, option()...)
 	}
 
-	args = append(args, sPledge, sCollateral)
+	args = append(args, sCollateral)
 
 	if err := f.RunCmdJSONWithStdin(ctx, nil, &out, args...); err != nil {
-		return address.Address{}, err
+		return address.Undef, err
 	}
 
 	return out.Address, nil
@@ -37,7 +35,7 @@ func (f *Filecoin) MinerCreate(ctx context.Context, pledge uint64, collateral *b
 
 // MinerUpdatePeerid runs the `miner update-peerid` command against the filecoin process
 func (f *Filecoin) MinerUpdatePeerid(ctx context.Context, minerAddr address.Address, pid peer.ID, options ...ActionOption) (cid.Cid, error) {
-	var out cid.Cid
+	var out commands.MinerUpdatePeerIDResult
 
 	args := []string{"go-filecoin", "miner", "update-peerid"}
 
@@ -51,29 +49,7 @@ func (f *Filecoin) MinerUpdatePeerid(ctx context.Context, minerAddr address.Addr
 		return cid.Undef, err
 	}
 
-	return out, nil
-}
-
-// MinerAddAsk runs the `miner add-ask` command against the filecoin process
-func (f *Filecoin) MinerAddAsk(ctx context.Context, minerAddr address.Address, fil *big.Float, expiry big.Int, options ...ActionOption) (cid.Cid, error) {
-	var out cid.Cid
-
-	sMinerAddr := minerAddr.String()
-	sExpiry := expiry.String()
-	sFil := fil.Text('f', -1)
-
-	args := []string{"go-filecoin", "miner", "add-ask"}
-
-	for _, option := range options {
-		args = append(args, option()...)
-	}
-
-	args = append(args, sMinerAddr, sFil, sExpiry)
-
-	if err := f.RunCmdJSONWithStdin(ctx, nil, &out, args...); err != nil {
-		return cid.Undef, err
-	}
-	return out, nil
+	return out.Cid, nil
 }
 
 // MinerOwner runs the `miner owner` command against the filecoin process
@@ -83,41 +59,28 @@ func (f *Filecoin) MinerOwner(ctx context.Context, minerAddr address.Address) (a
 	sMinerAddr := minerAddr.String()
 
 	if err := f.RunCmdJSONWithStdin(ctx, nil, &out, "go-filecoin", "miner", "owner", sMinerAddr); err != nil {
-		return address.Address{}, err
+		return address.Undef, err
 	}
 
 	return out, nil
 }
 
-// MinerPledge runs the `miner pledge` command against the filecoin process
-func (f *Filecoin) MinerPledge(ctx context.Context, minerAddr address.Address) (*big.Int, error) {
-	var out big.Int
-
-	sMinerAddr := minerAddr.String()
-
-	if err := f.RunCmdJSONWithStdin(ctx, nil, &out, "go-filecoin", "miner", "pledge", sMinerAddr); err != nil {
-		return big.NewInt(0), err
-	}
-
-	return &out, nil
-}
-
 // MinerPower runs the `miner power` command against the filecoin process
-func (f *Filecoin) MinerPower(ctx context.Context, minerAddr address.Address) (*big.Int, error) {
-	var out big.Int
+func (f *Filecoin) MinerPower(ctx context.Context, minerAddr address.Address) (porcelain.MinerPower, error) {
+	var out porcelain.MinerPower
 
 	sMinerAddr := minerAddr.String()
 
 	if err := f.RunCmdJSONWithStdin(ctx, nil, &out, "go-filecoin", "miner", "power", sMinerAddr); err != nil {
-		return big.NewInt(0), err
+		return porcelain.MinerPower{}, err
 	}
 
-	return &out, nil
+	return out, nil
 }
 
 // MinerSetPrice runs the `miner set-price` command against the filecoin process
 func (f *Filecoin) MinerSetPrice(ctx context.Context, fil *big.Float, expiry *big.Int, options ...ActionOption) (*porcelain.MinerSetPriceResponse, error) {
-	var out porcelain.MinerSetPriceResponse
+	var out commands.MinerSetPriceResult
 
 	sExpiry := expiry.String()
 	sFil := fil.Text('f', -1)
@@ -134,5 +97,42 @@ func (f *Filecoin) MinerSetPrice(ctx context.Context, fil *big.Float, expiry *bi
 		return nil, err
 	}
 
-	return &out, nil
+	return &out.MinerSetPriceResponse, nil
+}
+
+// MinerProvingWindow runs the `miner proving-window` command against the filecoin process
+func (f *Filecoin) MinerProvingWindow(ctx context.Context, miner address.Address) (porcelain.MinerProvingWindow, error) {
+	var out porcelain.MinerProvingWindow
+
+	if err := f.RunCmdJSONWithStdin(ctx, nil, &out, "go-filecoin", "miner", "proving-window", miner.String()); err != nil {
+		return porcelain.MinerProvingWindow{}, err
+	}
+
+	return out, nil
+}
+
+// MinerWorker runs the `miner worker` command against the filecoin process
+func (f *Filecoin) MinerWorker(ctx context.Context) (commands.MinerWorkerResult, error) {
+	var out commands.MinerWorkerResult
+
+	if err := f.RunCmdJSONWithStdin(ctx, nil, &out, "go-filecoin", "miner", "worker"); err != nil {
+		return out, err
+	}
+	return out, nil
+}
+
+// MinerSetWorker runs the `miner set-worker` command against the filecoin process
+func (f *Filecoin) MinerSetWorker(ctx context.Context, newAddr address.Address, options ...ActionOption) (cid.Cid, error) {
+	var out cid.Cid
+
+	args := []string{"go-filecoin", "miner", "set-worker", newAddr.String()}
+
+	for _, option := range options {
+		args = append(args, option()...)
+	}
+
+	if err := f.RunCmdJSONWithStdin(ctx, nil, &out, args...); err != nil {
+		return out, err
+	}
+	return out, nil
 }

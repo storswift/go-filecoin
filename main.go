@@ -1,35 +1,33 @@
 package main
 
 import (
+	"context"
 	"os"
-	"strconv"
 
-	logging "gx/ipfs/QmbkT7eMTyXfpeyB3ZMxxcxg7XH8t6uXp49jqzz4HB7BGF/go-log"
-	oldlogging "gx/ipfs/QmcaSwFc5RBg8yCq54QURwEU4nwjfCpjbpmaAm4VbdGLKv/go-logging"
+	logging "github.com/ipfs/go-log"
 
-	"github.com/filecoin-project/go-filecoin/commands"
-	"github.com/filecoin-project/go-filecoin/metrics"
+	"github.com/filecoin-project/go-filecoin/cmd/go-filecoin"
 )
 
 func main() {
-	// TODO: make configurable - this should be done via a command like go-ipfs
-	// something like:
-	//		`go-filecoin log level "system" "level"`
-	// TODO: find a better home for this
-	// TODO fix this in go-log 4 == INFO
-	n, err := strconv.Atoi(os.Getenv("GO_FILECOIN_LOG_LEVEL"))
-	if err != nil {
-		n = 4
+
+	// set default log level if no flags given
+	var level logging.LogLevel
+	var err error
+	lvl := os.Getenv("GO_FILECOIN_LOG_LEVEL")
+	if lvl == "" {
+		level = logging.LevelInfo
+	} else {
+		level, err = logging.LevelFromString(lvl)
+		if err != nil {
+			level = logging.LevelInfo
+		}
 	}
 
-	if os.Getenv("GO_FILECOIN_LOG_JSON") == "1" {
-		oldlogging.SetFormatter(&metrics.JSONFormatter{})
-	}
-
-	logging.SetAllLoggers(oldlogging.Level(n))
-
+	logging.SetAllLoggers(level)
 	logging.SetLogLevel("dht", "error")          // nolint: errcheck
 	logging.SetLogLevel("bitswap", "error")      // nolint: errcheck
+	logging.SetLogLevel("graphsync", "info")     // nolint: errcheck
 	logging.SetLogLevel("heartbeat", "error")    // nolint: errcheck
 	logging.SetLogLevel("blockservice", "error") // nolint: errcheck
 	logging.SetLogLevel("peerqueue", "error")    // nolint: errcheck
@@ -43,6 +41,6 @@ func main() {
 	// TODO implement help text like so:
 	// https://github.com/ipfs/go-ipfs/blob/master/core/commands/root.go#L91
 	// TODO don't panic if run without a command.
-	code, _ := commands.Run(os.Args, os.Stdin, os.Stdout, os.Stderr)
+	code, _ := commands.Run(context.Background(), os.Args, os.Stdin, os.Stdout, os.Stderr)
 	os.Exit(code)
 }
